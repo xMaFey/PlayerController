@@ -1,23 +1,36 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 [RequireComponent(typeof(AudioSource))]
 
 public class AdvancedPlayerMovement : MonoBehaviour
 {
+
+[Header("Player Settings")]
 public float speed = 10F;
 public float jumpHeight = 7F;
 public float dashSpeed = 20F;
 public float crouchHeight = 0.5F;
 
+[Header("Ground Check")]
 public LayerMask whatIsGround;
 public Transform groundCheckPoint;
 public float groundCheckRadius = 0.2F;
 
+[Header("Sound")]
 public AudioClip jumpSound;
 public AudioClip dashSound;
 public AudioClip footstepSound;
+
+[Header("Attack")]
+[SerializeField] private int attackDamage = 1;
+[SerializeField] private float attackRange = 1F;
+
+public LayerMask enemyLayers;
 
 private Rigidbody2D body;
 private Animator anim;
@@ -31,58 +44,34 @@ private bool facingRight = true;
     // Start is called before the first frame update
     private void Awake()
     {
-        body = GetComponent<Rigidbody2D>();
-        anim = GetComponent<Animator>();
-        audioPlayer = GetComponent<AudioSource>();
+        InitializeComponents();
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
         grounded = Physics2D.OverlapCircle(groundCheckPoint.position, groundCheckRadius, whatIsGround);
+        HandleMovement();
+    }
 
-        float horizontalInput = Input.GetAxisRaw("Horizontal");
-        body.velocity = new Vector2(horizontalInput * speed, body.velocity.y);
-        anim.SetBool("Walk", horizontalInput != 0);
+    void Update()
+    {
+        HandleInputs();
+    }
 
-        if(horizontalInput != 0 && grounded)
-        {
-            PlaySound(footstepSound);
-        }
+    private void HandleInputs()
+    {
+        HandleJump();
+        HandleDash();
+        HandleCrouch();
+        HandleAttack();
+    }
 
-        if(Input.GetKeyDown(KeyCode.LeftShift) && !isDashing)
-        {
-            StartCoroutine(Dash());
-        }
-
-        if(Input.GetKeyDown(KeyCode.LeftControl) && grounded)
-        {
-            if(!isCrouching){
-                transform.localScale = new Vector3(transform.localScale.x, crouchHeight, transform.localScale.z);
-                isCrouching = true;
-            }
-            else if(isCrouching)
-            {
-                transform.localScale = new Vector3(transform.localScale.x, 1F, transform.localScale.z);
-                isCrouching = false;
-            }
-        }
-
-        if((horizontalInput > 0 && !facingRight) || (horizontalInput < 0 && facingRight))
-        {
-            Flip();
-        }
-        
-        if(Input.GetKey(KeyCode.Space) && grounded)
-        {
-            Jump();
-            canDoubleJump = true;
-        }
-        else if(Input.GetKeyDown(KeyCode.Space) && canDoubleJump)
-        {
-            Jump();
-            canDoubleJump = false;
-        }
+    private void InitializeComponents()
+    {
+        body = GetComponent<Rigidbody2D>();
+        anim = GetComponent<Animator>();
+        audioPlayer = GetComponent<AudioSource>();
     }
 
     private void PlaySound(AudioClip clip)
@@ -107,6 +96,69 @@ private bool facingRight = true;
         PlaySound(jumpSound);
     }
 
+    private void HandleAttack()
+    {
+        if(Input.GetKeyDown(KeyCode.F))
+        {
+            attack();
+        }
+    }
+
+    private void HandleCrouch()
+    {
+        if(Input.GetKeyDown(KeyCode.LeftControl) && grounded)
+        {
+            if(!isCrouching){
+                transform.localScale = new Vector3(transform.localScale.x, crouchHeight, transform.localScale.z);
+                isCrouching = true;
+            }
+            else if(isCrouching)
+            {
+                transform.localScale = new Vector3(transform.localScale.x, 1F, transform.localScale.z);
+                isCrouching = false;
+            }
+        }
+    }
+
+    private void HandleMovement()
+    {
+        float horizontalInput = Input.GetAxisRaw("Horizontal");
+        body.velocity = new Vector2(horizontalInput * speed, body.velocity.y);
+        anim.SetBool("Walk", horizontalInput != 0);
+
+        if(horizontalInput != 0 && grounded)
+        {
+            PlaySound(footstepSound);
+        }
+
+        if((horizontalInput > 0 && !facingRight) || (horizontalInput < 0 && facingRight))
+        {
+            Flip();
+        }
+    }
+
+    private void HandleDash()
+    {
+        if(Input.GetKeyDown(KeyCode.LeftShift) && !isDashing)
+        {
+            StartCoroutine(Dash());
+        }
+    }
+
+    private void HandleJump()
+    {
+        if(Input.GetKeyDown(KeyCode.Space) && grounded)
+        {
+            Jump();
+            canDoubleJump = true;
+        }
+        else if(Input.GetKeyDown(KeyCode.Space) && canDoubleJump)
+        {
+            Jump();
+            canDoubleJump = false;
+        }
+    }
+
     IEnumerator Dash()
     {
         PlaySound(dashSound);
@@ -117,4 +169,25 @@ private bool facingRight = true;
         speed = originalSpeed;
         isDashing = false;
     }
+
+    void attack()
+    {
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(transform.position, attackRange, enemyLayers);
+        foreach (Collider2D enemy in hitEnemies)
+        {
+            EnemyController enemyController = enemy.GetComponent<EnemyController>();
+            if(enemyController != null)
+            {
+                enemyController.TakeDamage(attackDamage);
+                Debug.Log("Enemy Damaged!");
+            }
+        }
+    }
+
+    void onDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
 }
