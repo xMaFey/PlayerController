@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -21,7 +20,7 @@ public LayerMask whatIsGround;
 public Transform groundCheckPoint;
 public float groundCheckRadius = 0.2F;
 
-[Header("Sound")]
+[Header("Sounds")]
 public AudioClip jumpSound;
 public AudioClip dashSound;
 public AudioClip footstepSound;
