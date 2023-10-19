@@ -4,7 +4,8 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-[RequireComponent(typeof(AudioSource))]
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Animator))]
 
 public class AdvancedPlayerMovement : MonoBehaviour
 {
@@ -20,11 +21,6 @@ public LayerMask whatIsGround;
 public Transform groundCheckPoint;
 public float groundCheckRadius = 0.2F;
 
-[Header("Sounds")]
-public AudioClip jumpSound;
-public AudioClip dashSound;
-public AudioClip footstepSound;
-
 [Header("Attack")]
 [SerializeField] private int attackDamage = 1;
 [SerializeField] private float attackRange = 1F;
@@ -33,7 +29,6 @@ public LayerMask enemyLayers;
 
 private Rigidbody2D body;
 private Animator anim;
-private AudioSource audioPlayer;
 private bool grounded;
 private bool canDoubleJump = false;
 private bool isDashing = false;
@@ -70,13 +65,6 @@ private bool facingRight = true;
     {
         body = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
-        audioPlayer = GetComponent<AudioSource>();
-    }
-
-    private void PlaySound(AudioClip clip)
-    {
-        audioPlayer.clip = clip;
-        audioPlayer.Play();
     }
 
     private void Flip()
@@ -92,7 +80,7 @@ private bool facingRight = true;
         body.velocity = new Vector2(body.velocity.x, jumpHeight);
         anim.SetTrigger("Jump");
         grounded = false;
-        PlaySound(jumpSound);
+        AudioManager.instance.PlayJumpSound();
     }
 
     private void HandleAttack()
@@ -127,7 +115,7 @@ private bool facingRight = true;
 
         if(horizontalInput != 0 && grounded)
         {
-            PlaySound(footstepSound);
+            AudioManager.instance.PlayFootstepSound();
         }
 
         if((horizontalInput > 0 && !facingRight) || (horizontalInput < 0 && facingRight))
@@ -160,7 +148,7 @@ private bool facingRight = true;
 
     IEnumerator Dash()
     {
-        PlaySound(dashSound);
+        AudioManager.instance.PlayDashSound();
         float originalSpeed = speed;
         speed = dashSpeed;
         isDashing = true;
